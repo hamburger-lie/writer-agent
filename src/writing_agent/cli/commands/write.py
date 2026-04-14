@@ -1,0 +1,60 @@
+"""CLI command for running the Stage 3 planner-to-writer pipeline."""
+
+from __future__ import annotations
+
+import typer
+from rich.console import Console
+
+from writing_agent.agents.planner import PlannerAgent
+from writing_agent.agents.writer import WriterAgent
+from writing_agent.config import get_settings
+from writing_agent.controller.pipeline import WritingPipeline
+from writing_agent.llm.provider import LLMProvider
+from writing_agent.storage.manager import StorageManager
+
+
+console = Console()
+
+
+def build_write_pipeline(settings) -> WritingPipeline:
+    """Build the planner and writer pipeline with real project services."""
+
+    manager = StorageManager(settings)
+    manager.initialize()
+
+    planner = PlannerAgent(
+        settings=settings,
+        sqlite_store=manager.get_sqlite_store("planner"),
+        vector_store=manager.get_vector_store("planner"),
+        llm_provider=LLMProvider(settings),
+    )
+    writer = WriterAgent(
+        settings=settings,
+        sqlite_store=manager.get_sqlite_store("writer"),
+        vector_store=manager.get_vector_store("writer"),
+        llm_provider=LLMProvider(settings),
+    )
+    return WritingPipeline(settings=settings, planner=planner, writer=writer)
+
+
+def write_command(topic: str) -> None:
+    """Execute the minimum viable planner-to-writer pipeline for a topic."""
+
+    settings = get_settings(clear_cache=True)
+
+    try:
+        result = build_write_pipeline(settings).run(topic)
+    except Exception as exc:
+        console.print(f"[red]write failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"task_id={result.task.task_id}")
+    console.print(f"task_dir={result.task.task_dir}")
+    console.print(f"plan={result.task.plan_file}")
+    console.print(f"draft={result.task.draft_file}")
+    console.print("Outline Preview")
+    for item in result.plan.outline[:5]:
+        console.print(f"- {item}")
+    console.print("Draft Preview")
+    for line in result.draft.splitlines()[:12]:
+        console.print(line)
