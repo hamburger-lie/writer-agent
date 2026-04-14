@@ -6,11 +6,14 @@ import typer
 from rich.console import Console
 
 from writing_agent.agents.planner import PlannerAgent
+from writing_agent.agents.researcher import ResearcherAgent
 from writing_agent.agents.writer import WriterAgent
 from writing_agent.config import get_settings
 from writing_agent.controller.pipeline import WritingPipeline
 from writing_agent.llm.provider import LLMProvider
 from writing_agent.storage.manager import StorageManager
+from writing_agent.tools.web_scraper import Crawl4AIScraper
+from writing_agent.tools.web_search import build_search_client
 
 
 console = Console()
@@ -22,19 +25,34 @@ def build_write_pipeline(settings) -> WritingPipeline:
     manager = StorageManager(settings)
     manager.initialize()
 
+    llm_provider = LLMProvider(settings)
+
     planner = PlannerAgent(
         settings=settings,
         sqlite_store=manager.get_sqlite_store("planner"),
         vector_store=manager.get_vector_store("planner"),
-        llm_provider=LLMProvider(settings),
+        llm_provider=llm_provider,
+    )
+    researcher = ResearcherAgent(
+        settings=settings,
+        sqlite_store=manager.get_sqlite_store("researcher"),
+        vector_store=manager.get_vector_store("researcher"),
+        llm_provider=llm_provider,
+        search_client=build_search_client(settings),
+        scraper=Crawl4AIScraper(settings),
     )
     writer = WriterAgent(
         settings=settings,
         sqlite_store=manager.get_sqlite_store("writer"),
         vector_store=manager.get_vector_store("writer"),
-        llm_provider=LLMProvider(settings),
+        llm_provider=llm_provider,
     )
-    return WritingPipeline(settings=settings, planner=planner, writer=writer)
+    return WritingPipeline(
+        settings=settings,
+        planner=planner,
+        researcher=researcher,
+        writer=writer,
+    )
 
 
 def write_command(topic: str) -> None:
@@ -51,6 +69,7 @@ def write_command(topic: str) -> None:
     console.print(f"task_id={result.task.task_id}")
     console.print(f"task_dir={result.task.task_dir}")
     console.print(f"plan={result.task.plan_file}")
+    console.print(f"research={result.task.research_file}")
     console.print(f"draft={result.task.draft_file}")
     console.print("Outline Preview")
     for item in result.plan.outline[:5]:

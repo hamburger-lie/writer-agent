@@ -23,6 +23,7 @@ class PipelineStage(StrEnum):
     """Supported stages in the Stage 3 pipeline."""
 
     PLANNER = "planner"
+    RESEARCHER = "researcher"
     WRITER = "writer"
 
 
@@ -39,6 +40,34 @@ class PlanResult(BaseModel):
     research_questions: list[str]
 
 
+class ResearchSource(BaseModel):
+    """One normalized source surfaced by the research stage."""
+
+    title: str
+    url: str
+    snippet: str
+    fetched_at: str
+
+
+class ResearchFinding(BaseModel):
+    """One evidence-backed finding extracted from researched sources."""
+
+    claim: str
+    evidence: str
+    source_url: str
+
+
+class ResearchResult(BaseModel):
+    """Structured research artifact persisted to `research.json`."""
+
+    topic: str
+    search_queries: list[str]
+    sources: list[ResearchSource]
+    findings: list[ResearchFinding]
+    key_takeaways: list[str]
+    open_questions: list[str]
+
+
 class PipelineTask(BaseModel):
     """Runtime metadata for a single writing task execution."""
 
@@ -50,6 +79,7 @@ class PipelineTask(BaseModel):
     updated_at: datetime
     task_dir: Path
     plan_file: Path
+    research_file: Path
     draft_file: Path
 
     @classmethod
@@ -66,5 +96,6 @@ class PipelineTask(BaseModel):
             updated_at=now,
             task_dir=task_dir,
             plan_file=task_dir / "plan.json",
+            research_file=task_dir / "research.json",
             draft_file=task_dir / "draft.md",
         )

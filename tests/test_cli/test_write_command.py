@@ -6,7 +6,15 @@ from typer.testing import CliRunner
 
 from writing_agent.cli.app import app
 from writing_agent.controller.pipeline import PipelineRunResult
-from writing_agent.controller.task import PipelineStage, PipelineStatus, PipelineTask, PlanResult
+from writing_agent.controller.task import (
+    PipelineStage,
+    PipelineStatus,
+    PipelineTask,
+    PlanResult,
+    ResearchFinding,
+    ResearchResult,
+    ResearchSource,
+)
 
 
 class _FakePipeline:
@@ -32,6 +40,7 @@ def test_write_command_shows_paths_and_previews(monkeypatch, tmp_path: Path) -> 
         updated_at=PipelineTask.create("seed", tmp_path).updated_at,
         task_dir=task_dir,
         plan_file=task_dir / "plan.json",
+        research_file=task_dir / "research.json",
         draft_file=task_dir / "draft.md",
     )
     result_payload = PipelineRunResult(
@@ -46,6 +55,27 @@ def test_write_command_shows_paths_and_previews(monkeypatch, tmp_path: Path) -> 
             constraints=["Professional tone"],
             research_questions=["What use cases are growing fastest?"],
         ),
+        research=ResearchResult(
+            topic="AI writing trends",
+            search_queries=["ai writing trends 2026"],
+            sources=[
+                ResearchSource(
+                    title="Example",
+                    url="https://example.com",
+                    snippet="Example snippet",
+                    fetched_at="2026-04-14T00:00:00+00:00",
+                )
+            ],
+            findings=[
+                ResearchFinding(
+                    claim="AI tools are mainstream.",
+                    evidence="Broad enterprise adoption is reported.",
+                    source_url="https://example.com",
+                )
+            ],
+            key_takeaways=["AI tools are mainstream."],
+            open_questions=["Which teams are moving fastest?"],
+        ),
         draft="# AI Writing Trends in 2026\n\nIntro paragraph.\n\n## Overview\n\nBody text.",
     )
 
@@ -59,6 +89,7 @@ def test_write_command_shows_paths_and_previews(monkeypatch, tmp_path: Path) -> 
     assert result.exit_code == 0
     assert "task_id=task-123" in result.stdout
     assert "plan.json" in result.stdout
+    assert "research.json" in result.stdout
     assert "draft.md" in result.stdout
     assert "Outline Preview" in result.stdout
     assert "Draft Preview" in result.stdout

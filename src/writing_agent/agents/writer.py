@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from writing_agent.agents.base import BaseAgent
-from writing_agent.controller.task import PlanResult
+from writing_agent.controller.task import PlanResult, ResearchResult
 from writing_agent.llm.models import DEEPSEEK_CHAT
 from writing_agent.llm.prompts.writer import build_writer_prompt
 
@@ -21,8 +21,8 @@ class WriterAgent(BaseAgent):
             llm_provider=llm_provider,
         )
 
-    def run(self, plan: PlanResult) -> str:
-        system_prompt, prompt = build_writer_prompt(plan)
+    def run(self, plan: PlanResult, research: ResearchResult) -> str:
+        system_prompt, prompt = build_writer_prompt(plan, research)
         return self.llm_provider.generate(
             prompt=prompt,
             system_prompt=system_prompt,
