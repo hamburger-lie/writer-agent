@@ -158,3 +158,72 @@ def test_researcher_ingests_shared_facts_after_success() -> None:
     agent.run(plan)
 
     librarian.ingest_research.assert_called_once()
+
+
+def test_researcher_normalizes_llm_summary_payload_shapes() -> None:
+    llm_provider = Mock()
+    llm_provider.generate_json.side_effect = [
+        {"queries": ["ai writing trends 2026"]},
+        {
+            "topic": "AI writing trends",
+            "search_queries": ["ai writing trends 2026"],
+            "sources": [
+                "https://example.com",
+            ],
+            "findings": {
+                "overall_trend": "AI tools are mainstream.",
+                "operational_impact": [
+                    "Teams use AI to speed up content production.",
+                ],
+            },
+            "key_takeaways": ["AI tools are mainstream."],
+            "open_questions": ["Which teams are adopting fastest?"],
+        },
+    ]
+    search_client = Mock()
+    search_client.search.return_value = [
+        SearchResult(title="Example", url="https://example.com", snippet="Example snippet"),
+        SearchResult(title="Example 2", url="https://example.org", snippet="Example snippet 2"),
+    ]
+    scraper = Mock()
+    scraper.scrape_many.return_value = [
+        ScrapeResult(
+            url="https://example.com",
+            title="Example",
+            markdown="# Example",
+            success=True,
+            error=None,
+        ),
+        ScrapeResult(
+            url="https://example.org",
+            title="Example 2",
+            markdown="# Example 2",
+            success=True,
+            error=None,
+        ),
+    ]
+
+    agent = ResearcherAgent(
+        settings=Settings(DEEPSEEK_API_KEY="test-key", SEARCH_ENGINE="serper", SEARCH_API_KEY="search-key"),
+        sqlite_store=Mock(),
+        vector_store=Mock(),
+        llm_provider=llm_provider,
+        search_client=search_client,
+        scraper=scraper,
+    )
+
+    result = agent.run(
+        PlanResult(
+            topic="AI writing trends",
+            audience="content strategists",
+            goal="explain the landscape",
+            title="AI Writing Trends in 2026",
+            outline=["Overview", "Adoption"],
+            key_points=["Tools are mainstream"],
+            constraints=["Professional tone"],
+            research_questions=["What use cases are growing fastest?"],
+        )
+    )
+
+    assert result.sources[0].url == "https://example.com"
+    assert result.findings[0].claim == "overall_trend"

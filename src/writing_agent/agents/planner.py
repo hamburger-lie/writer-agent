@@ -28,4 +28,7 @@ class PlannerAgent(BaseAgent):
             system_prompt=system_prompt,
             model=DEEPSEEK_REASONER,
         )
-        return PlanResult.model_validate(payload)
+        normalized_payload = dict(payload)
+        if isinstance(normalized_payload.get("constraints"), str):
+            normalized_payload["constraints"] = [normalized_payload["constraints"]]
+        return PlanResult.model_validate(normalized_payload)

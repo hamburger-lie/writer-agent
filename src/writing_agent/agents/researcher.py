@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from writing_agent.agents.base import BaseAgent
-from writing_agent.controller.task import PlanResult, ResearchResult
+from writing_agent.controller.task import PlanResult, ResearchFinding, ResearchResult, ResearchSource
 from writing_agent.llm.models import DEEPSEEK_CHAT
 from writing_agent.llm.prompts.researcher import (
     build_research_query_prompt,
@@ -48,6 +46,56 @@ class ResearcherAgent(BaseAgent):
             deduped.append(item)
         return deduped
 
+    def _normalize_summary_payload(self, payload: dict, search_queries, deduped_results) -> dict:
+        normalized = dict(payload)
+
+        raw_sources = payload.get("sources", [])
+        normalized_sources = []
+        if isinstance(raw_sources, list):
+            for item in raw_sources:
+                if isinstance(item, dict):
+                    normalized_sources.append(item)
+                    continue
+                if isinstance(item, str):
+                    match = next((result for result in deduped_results if result.url == item), None)
+                    normalized_sources.append(
+                        {
+                            "title": "" if match is None else match.title,
+                            "url": item,
+                            "snippet": "" if match is None else match.snippet,
+                            "fetched_at": "",
+                        }
+                    )
+        normalized["sources"] = normalized_sources
+
+        raw_findings = payload.get("findings", [])
+        normalized_findings = []
+        if isinstance(raw_findings, list):
+            normalized_findings = raw_findings
+        elif isinstance(raw_findings, dict):
+            source_url = normalized_sources[0]["url"] if normalized_sources else ""
+            for key, value in raw_findings.items():
+                if isinstance(value, str):
+                    normalized_findings.append(
+                        {
+                            "claim": key,
+                            "evidence": value,
+                            "source_url": source_url,
+                        }
+                    )
+                elif isinstance(value, list):
+                    for item in value:
+                        normalized_findings.append(
+                            {
+                                "claim": key,
+                                "evidence": str(item),
+                                "source_url": source_url,
+                            }
+                        )
+        normalized["findings"] = normalized_findings
+        normalized["search_queries"] = payload.get("search_queries", search_queries)
+        return normalized
+
     def run(self, plan: PlanResult) -> ResearchResult:
         query_system_prompt, query_prompt = build_research_query_prompt(plan)
         query_payload = self.llm_provider.generate_json(
@@ -83,7 +131,9 @@ class ResearcherAgent(BaseAgent):
             system_prompt=summary_system_prompt,
             model=DEEPSEEK_CHAT,
         )
-        research = ResearchResult.model_validate(summary_payload)
+        research = ResearchResult.model_validate(
+            self._normalize_summary_payload(summary_payload, search_queries, deduped_results)
+        )
 
         if len(research.findings) < 1:
             raise RuntimeError("Research summary did not contain any findings.")

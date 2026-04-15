@@ -25,7 +25,7 @@ Return valid JSON only with these fields:
 Requirements:
 - outline must be an ordered list of section headings
 - key_points must be concrete article points to cover
-- constraints must describe tone or writing limits
+- constraints must be a list of tone or writing limits
 - research_questions should be useful for a future research phase
 """
     return system_prompt, user_prompt

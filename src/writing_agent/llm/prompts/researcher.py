@@ -74,5 +74,11 @@ Return valid JSON only with these fields:
 - findings
 - key_takeaways
 - open_questions
+
+Requirements:
+- sources must be a list of objects with title, url, snippet, fetched_at
+- findings must be a list of objects with claim, evidence, source_url
+- do not return sources as plain strings
+- do not return findings as a nested object
 """
     return system_prompt, user_prompt

@@ -37,6 +37,6 @@ Return JSON with:
 Requirements:
 - decision must be either "pass" or "fail"
 - issues must be a list of objects with severity, title, details
-- revision_instructions must be concrete and actionable
+- revision_instructions must be a list of concrete and actionable strings
 """
     return system_prompt, user_prompt

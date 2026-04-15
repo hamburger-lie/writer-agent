@@ -32,4 +32,7 @@ class ReviewerAgent(BaseAgent):
             system_prompt=system_prompt,
             model=DEEPSEEK_REASONER,
         )
-        return ReviewResult.model_validate(payload)
+        normalized_payload = dict(payload)
+        if isinstance(normalized_payload.get("revision_instructions"), str):
+            normalized_payload["revision_instructions"] = [normalized_payload["revision_instructions"]]
+        return ReviewResult.model_validate(normalized_payload)
