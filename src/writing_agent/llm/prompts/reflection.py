@@ -35,3 +35,43 @@ Requirements:
 - confidence must be a float between 0 and 1
 """
     return system_prompt, user_prompt
+
+
+def build_human_reflection_prompt(
+    *,
+    task_id: str,
+    original_text: str,
+    edited_text: str,
+    diff_text: str,
+) -> tuple[str, str]:
+    """Return prompts for extracting reusable human editing preferences."""
+
+    system_prompt = (
+        "You are the human reflection agent for a multi-agent writing system. "
+        "Infer reusable editing preferences from how a user changed a draft. "
+        "Return JSON only."
+    )
+    user_prompt = f"""Analyze this user edit and return valid JSON only.
+
+Task ID: {task_id}
+
+Original draft:
+{original_text}
+
+Edited draft:
+{edited_text}
+
+Unified diff:
+{diff_text}
+
+Return JSON with:
+- summary
+- rules
+
+Requirements:
+- rules must be a list of up to 3 objects
+- each rule object must include rule_text, category, confidence
+- rule_text must be reusable and not topic-specific
+- confidence must be a float between 0 and 1
+"""
+    return system_prompt, user_prompt
