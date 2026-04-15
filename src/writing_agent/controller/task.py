@@ -25,6 +25,8 @@ class PipelineStage(StrEnum):
     PLANNER = "planner"
     RESEARCHER = "researcher"
     WRITER = "writer"
+    POLISHER = "polisher"
+    REVIEWER = "reviewer"
 
 
 class PlanResult(BaseModel):
@@ -68,6 +70,23 @@ class ResearchResult(BaseModel):
     open_questions: list[str]
 
 
+class ReviewIssue(BaseModel):
+    """One structured issue emitted by the reviewer."""
+
+    severity: str
+    title: str
+    details: str
+
+
+class ReviewResult(BaseModel):
+    """Structured reviewer decision persisted to `review.json`."""
+
+    decision: str
+    summary: str
+    issues: list[ReviewIssue]
+    revision_instructions: list[str]
+
+
 class PipelineTask(BaseModel):
     """Runtime metadata for a single writing task execution."""
 
@@ -81,6 +100,9 @@ class PipelineTask(BaseModel):
     plan_file: Path
     research_file: Path
     draft_file: Path
+    polished_file: Path
+    review_file: Path
+    final_file: Path
 
     @classmethod
     def create(cls, topic: str, tasks_root: Path) -> "PipelineTask":
@@ -98,4 +120,7 @@ class PipelineTask(BaseModel):
             plan_file=task_dir / "plan.json",
             research_file=task_dir / "research.json",
             draft_file=task_dir / "draft.md",
+            polished_file=task_dir / "polished.md",
+            review_file=task_dir / "review.json",
+            final_file=task_dir / "final.md",
         )

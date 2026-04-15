@@ -11,6 +11,8 @@ from writing_agent.controller.task import (
     PipelineStatus,
     PipelineTask,
     PlanResult,
+    ReviewIssue,
+    ReviewResult,
     ResearchFinding,
     ResearchResult,
     ResearchSource,
@@ -42,6 +44,9 @@ def test_write_command_shows_paths_and_previews(monkeypatch, tmp_path: Path) -> 
         plan_file=task_dir / "plan.json",
         research_file=task_dir / "research.json",
         draft_file=task_dir / "draft.md",
+        polished_file=task_dir / "polished.md",
+        review_file=task_dir / "review.json",
+        final_file=task_dir / "final.md",
     )
     result_payload = PipelineRunResult(
         task=task,
@@ -77,6 +82,14 @@ def test_write_command_shows_paths_and_previews(monkeypatch, tmp_path: Path) -> 
             open_questions=["Which teams are moving fastest?"],
         ),
         draft="# AI Writing Trends in 2026\n\nIntro paragraph.\n\n## Overview\n\nBody text.",
+        polished="# Final Draft\n\nImproved article.",
+        review=ReviewResult(
+            decision="pass",
+            summary="Ready to publish.",
+            issues=[],
+            revision_instructions=[],
+        ),
+        final="# Final Draft\n\nImproved article.",
     )
 
     monkeypatch.setattr(
@@ -91,5 +104,8 @@ def test_write_command_shows_paths_and_previews(monkeypatch, tmp_path: Path) -> 
     assert "plan.json" in result.stdout
     assert "research.json" in result.stdout
     assert "draft.md" in result.stdout
+    assert "polished.md" in result.stdout
+    assert "review.json" in result.stdout
+    assert "final.md" in result.stdout
     assert "Outline Preview" in result.stdout
     assert "Draft Preview" in result.stdout

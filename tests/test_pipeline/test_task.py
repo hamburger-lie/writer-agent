@@ -6,6 +6,8 @@ from writing_agent.controller.task import (
     PipelineStatus,
     PipelineTask,
     PlanResult,
+    ReviewIssue,
+    ReviewResult,
     ResearchFinding,
     ResearchResult,
     ResearchSource,
@@ -21,6 +23,9 @@ def test_pipeline_task_creates_expected_output_paths(tmp_path: Path) -> None:
     assert task.plan_file == task.task_dir / "plan.json"
     assert task.research_file == task.task_dir / "research.json"
     assert task.draft_file == task.task_dir / "draft.md"
+    assert task.polished_file == task.task_dir / "polished.md"
+    assert task.review_file == task.task_dir / "review.json"
+    assert task.final_file == task.task_dir / "final.md"
 
 
 def test_plan_result_serializes_to_json_ready_payload() -> None:
@@ -68,3 +73,26 @@ def test_research_result_serializes_nested_sources_and_findings() -> None:
 
     assert payload["sources"][0]["url"] == "https://example.com/report"
     assert payload["findings"][0]["source_url"] == "https://example.com/report"
+
+
+def test_review_result_serializes_nested_issues() -> None:
+    review = ReviewResult(
+        decision="fail",
+        summary="Needs stronger evidence and smoother flow.",
+        issues=[
+            ReviewIssue(
+                severity="high",
+                title="Weak evidence",
+                details="Several claims need clearer source-backed support.",
+            )
+        ],
+        revision_instructions=[
+            "Strengthen evidence in the market adoption section.",
+            "Tighten transitions between sections.",
+        ],
+    )
+
+    payload = review.model_dump()
+
+    assert payload["decision"] == "fail"
+    assert payload["issues"][0]["severity"] == "high"

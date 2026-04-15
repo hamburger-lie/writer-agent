@@ -13,6 +13,7 @@ from writing_agent.controller.task import (
     PipelineTask,
     PlanResult,
     ResearchResult,
+    ReviewResult,
 )
 
 
@@ -24,16 +25,21 @@ class PipelineRunResult:
     plan: PlanResult
     research: ResearchResult
     draft: str
+    polished: str
+    review: ReviewResult
+    final: str
 
 
 class WritingPipeline:
     """Run the minimum viable planner-to-writer pipeline."""
 
-    def __init__(self, settings: Settings, planner, researcher, writer) -> None:
+    def __init__(self, settings: Settings, planner, researcher, writer, polisher, reviewer) -> None:
         self.settings = settings
         self.planner = planner
         self.researcher = researcher
         self.writer = writer
+        self.polisher = polisher
+        self.reviewer = reviewer
 
     def run(self, topic: str) -> PipelineRunResult:
         task = PipelineTask.create(topic=topic, tasks_root=self.settings.data_dir / "tasks")
@@ -121,6 +127,85 @@ class WritingPipeline:
             output_summary=draft.splitlines()[0] if draft else "",
         )
 
-        task.status = PipelineStatus.COMPLETED
+        current_draft = draft
+        current_review: ReviewResult | None = None
+        current_polished = draft
+
+        for review_round in range(3):
+            task.current_stage = PipelineStage.POLISHER
+            task.updated_at = datetime.now(UTC)
+            try:
+                current_polished = self.polisher.run(
+                    draft=current_draft,
+                    plan=plan,
+                    research=research,
+                    review=current_review,
+                )
+            except Exception:
+                task.status = PipelineStatus.FAILED
+                task.updated_at = datetime.now(UTC)
+                self.polisher.record_task_history(
+                    task_id=task.task_id,
+                    task_type="polisher",
+                    status="failed",
+                    input_summary=plan.title,
+                    output_summary=None,
+                )
+                raise
+
+            task.polished_file.write_text(current_polished, encoding="utf-8")
+            self.polisher.record_task_history(
+                task_id=task.task_id,
+                task_type="polisher",
+                status="success",
+                input_summary=plan.title,
+                output_summary=current_polished.splitlines()[0] if current_polished else "",
+            )
+
+            task.current_stage = PipelineStage.REVIEWER
+            task.updated_at = datetime.now(UTC)
+            try:
+                current_review = self.reviewer.run(current_polished, plan, research)
+            except Exception:
+                task.status = PipelineStatus.FAILED
+                task.updated_at = datetime.now(UTC)
+                self.reviewer.record_task_history(
+                    task_id=task.task_id,
+                    task_type="reviewer",
+                    status="failed",
+                    input_summary=plan.title,
+                    output_summary=None,
+                )
+                raise
+
+            task.review_file.write_text(
+                json.dumps(current_review.model_dump(), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            self.reviewer.record_task_history(
+                task_id=task.task_id,
+                task_type="reviewer",
+                status="success",
+                input_summary=plan.title,
+                output_summary=current_review.decision,
+            )
+
+            if current_review.decision == "pass":
+                task.final_file.write_text(current_polished, encoding="utf-8")
+                task.status = PipelineStatus.COMPLETED
+                task.updated_at = datetime.now(UTC)
+                return PipelineRunResult(
+                    task=task,
+                    plan=plan,
+                    research=research,
+                    draft=draft,
+                    polished=current_polished,
+                    review=current_review,
+                    final=current_polished,
+                )
+
+            current_draft = current_polished
+
+        task.status = PipelineStatus.FAILED
         task.updated_at = datetime.now(UTC)
-        return PipelineRunResult(task=task, plan=plan, research=research, draft=draft)
+        raise RuntimeError("Review loop exceeded maximum retries.")

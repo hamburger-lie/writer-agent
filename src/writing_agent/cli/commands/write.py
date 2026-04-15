@@ -6,7 +6,9 @@ import typer
 from rich.console import Console
 
 from writing_agent.agents.planner import PlannerAgent
+from writing_agent.agents.polisher import PolisherAgent
 from writing_agent.agents.researcher import ResearcherAgent
+from writing_agent.agents.reviewer import ReviewerAgent
 from writing_agent.agents.writer import WriterAgent
 from writing_agent.config import get_settings
 from writing_agent.controller.pipeline import WritingPipeline
@@ -47,11 +49,25 @@ def build_write_pipeline(settings) -> WritingPipeline:
         vector_store=manager.get_vector_store("writer"),
         llm_provider=llm_provider,
     )
+    polisher = PolisherAgent(
+        settings=settings,
+        sqlite_store=manager.get_sqlite_store("polisher"),
+        vector_store=manager.get_vector_store("polisher"),
+        llm_provider=llm_provider,
+    )
+    reviewer = ReviewerAgent(
+        settings=settings,
+        sqlite_store=manager.get_sqlite_store("reviewer"),
+        vector_store=manager.get_vector_store("reviewer"),
+        llm_provider=llm_provider,
+    )
     return WritingPipeline(
         settings=settings,
         planner=planner,
         researcher=researcher,
         writer=writer,
+        polisher=polisher,
+        reviewer=reviewer,
     )
 
 
@@ -71,6 +87,9 @@ def write_command(topic: str) -> None:
     console.print(f"plan={result.task.plan_file}")
     console.print(f"research={result.task.research_file}")
     console.print(f"draft={result.task.draft_file}")
+    console.print(f"polished={result.task.polished_file}")
+    console.print(f"review={result.task.review_file}")
+    console.print(f"final={result.task.final_file}")
     console.print("Outline Preview")
     for item in result.plan.outline[:5]:
         console.print(f"- {item}")
