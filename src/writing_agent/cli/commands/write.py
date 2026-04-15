@@ -16,7 +16,7 @@ from writing_agent.controller.pipeline import WritingPipeline
 from writing_agent.llm.provider import LLMProvider
 from writing_agent.reflection.auto_reflect import AutoReflectionEngine
 from writing_agent.storage.manager import StorageManager
-from writing_agent.tools.web_scraper import Crawl4AIScraper
+from writing_agent.tools.web_scraper import build_scraper
 from writing_agent.tools.web_search import build_search_client
 
 
@@ -44,7 +44,7 @@ def build_write_pipeline(settings) -> WritingPipeline:
         vector_store=manager.get_vector_store("researcher"),
         llm_provider=llm_provider,
         search_client=build_search_client(settings),
-        scraper=Crawl4AIScraper(settings),
+        scraper=build_scraper(settings),
         librarian=librarian,
     )
     writer = WriterAgent(

@@ -19,7 +19,7 @@ AGENT_NAMES = (
     "librarian",
 )
 
-SUPPORTED_SEARCH_ENGINES = ("serper", "bing", "google")
+SUPPORTED_SEARCH_ENGINES = ("serper", "bing", "google", "firecrawl")
 
 
 class ValidationSeverity(StrEnum):
@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     deepseek_base_url: str = Field(default="https://api.deepseek.com", alias="DEEPSEEK_BASE_URL")
     search_engine: str | None = Field(default=None, alias="SEARCH_ENGINE")
     search_api_key: str | None = Field(default=None, alias="SEARCH_API_KEY")
+    firecrawl_api_key: str | None = Field(default=None, alias="FIRECRAWL_API_KEY")
     whitepaper_api_url: str | None = Field(default=None, alias="WHITEPAPER_API_URL")
     data_dir_raw: str = Field(default="./data", alias="DATA_DIR")
     llm_timeout_seconds: int = Field(default=120, alias="LLM_TIMEOUT_SECONDS")
@@ -117,6 +118,23 @@ class Settings(BaseSettings):
                         ),
                     )
                 )
+            elif self.search_engine == "firecrawl":
+                if self.firecrawl_api_key:
+                    items.append(
+                        ValidationItem(
+                            field="FIRECRAWL_API_KEY",
+                            severity=ValidationSeverity.INFO,
+                            message="Configured for firecrawl.",
+                        )
+                    )
+                else:
+                    items.append(
+                        ValidationItem(
+                            field="FIRECRAWL_API_KEY",
+                            severity=ValidationSeverity.ERROR,
+                            message="Required when SEARCH_ENGINE is set to firecrawl.",
+                        )
+                    )
             elif self.search_api_key:
                 items.append(
                     ValidationItem(

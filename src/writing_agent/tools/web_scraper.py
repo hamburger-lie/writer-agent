@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import httpx
 
 from pydantic import BaseModel
 
@@ -65,3 +66,50 @@ class Crawl4AIScraper:
                 )
 
         return results
+
+
+class FirecrawlScraper:
+    """HTTP scraper backed by Firecrawl's scrape endpoint."""
+
+    endpoint = "https://api.firecrawl.dev/v2/scrape"
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+
+    def scrape_many(self, urls: list[str]) -> list[ScrapeResult]:
+        if not self.settings.firecrawl_api_key:
+            raise ScraperError("FIRECRAWL_API_KEY is required for Firecrawl scraping.")
+
+        results: list[ScrapeResult] = []
+        for url in urls:
+            response = httpx.post(
+                self.endpoint,
+                headers={
+                    "Authorization": f"Bearer {self.settings.firecrawl_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={"url": url, "formats": ["markdown"]},
+                timeout=self.settings.llm_timeout_seconds,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            data = payload.get("data", {})
+            metadata = data.get("metadata", {})
+            results.append(
+                ScrapeResult(
+                    url=str(metadata.get("sourceURL", url)),
+                    title=str(metadata.get("title", "") or ""),
+                    markdown=str(data.get("markdown", "") or ""),
+                    success=bool(payload.get("success", False)),
+                    error=None,
+                )
+            )
+        return results
+
+
+def build_scraper(settings: Settings):
+    """Create the configured scraper backend for the current settings."""
+
+    if settings.search_engine == "firecrawl":
+        return FirecrawlScraper(settings)
+    return Crawl4AIScraper(settings)
