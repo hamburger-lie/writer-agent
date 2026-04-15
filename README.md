@@ -346,12 +346,12 @@ src/writing_agent/
 ## 开发路线
 
 - [x] 阶段1：项目骨架 + README
-- [ ] 阶段2：基础设施（config、storage、llm provider、base agent）
-- [ ] 阶段3：核心流水线（planner → writer，最小可用版本）
-- [ ] 阶段4：调研工具（web search + Crawl4AI + researcher agent）
-- [ ] 阶段5：润色 + 审核循环
-- [ ] 阶段6：图书管理员 + 跨Agent知识管理
-- [ ] 阶段7：反思系统（自动 + 人工）
+- [x] 阶段2：基础设施（config、storage、llm provider、base agent）
+- [x] 阶段3：核心流水线（planner → writer，最小可用版本）
+- [x] 阶段4：调研工具（web search + Crawl4AI + researcher agent）
+- [x] 阶段5：润色 + 审核循环
+- [x] 阶段6：图书管理员 + 跨Agent知识管理
+- [x] 阶段7：反思系统（自动 + 人工中的自动反思）
 - [ ] 阶段8：CLI完善 + 错误处理加固
 - [ ] 阶段9：Web界面（后续）
 

@@ -109,6 +109,19 @@ class SQLiteStore:
             conn.commit()
         return int(cursor.lastrowid)
 
+    def list_task_history(self, limit: int = 10) -> list[sqlite3.Row]:
+        with self._connect() as conn:
+            return list(
+                conn.execute(
+                    """
+                    SELECT * FROM task_history
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                ).fetchall()
+            )
+
     def add_reflection(
         self,
         reflection_text: str,
