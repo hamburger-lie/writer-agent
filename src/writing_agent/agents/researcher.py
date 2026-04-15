@@ -24,6 +24,7 @@ class ResearcherAgent(BaseAgent):
         llm_provider,
         search_client,
         scraper,
+        librarian=None,
     ) -> None:
         super().__init__(
             name="researcher",
@@ -35,6 +36,7 @@ class ResearcherAgent(BaseAgent):
         )
         self.search_client = search_client
         self.scraper = scraper
+        self.librarian = librarian
 
     def _dedupe_results(self, results):
         seen: set[str] = set()
@@ -85,5 +87,8 @@ class ResearcherAgent(BaseAgent):
 
         if len(research.findings) < 1:
             raise RuntimeError("Research summary did not contain any findings.")
+
+        if self.librarian is not None:
+            self.librarian.ingest_research(plan, research)
 
         return research

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from writing_agent.config import AGENT_NAMES, Settings
 from writing_agent.storage.schema import SCHEMA_VERSION
+from writing_agent.storage.shared_knowledge_store import SharedKnowledgeStore
 from writing_agent.storage.sqlite_store import SQLiteStore
 from writing_agent.storage.vector_store import DeferredVectorStore
 
@@ -46,6 +47,12 @@ class StorageManager:
     def get_sqlite_store(self, agent_name: str) -> SQLiteStore:
         return SQLiteStore(self.get_agent_paths(agent_name).db_path)
 
+    def get_shared_library_path(self) -> Path:
+        return self.settings.data_dir / "shared" / "library.db"
+
+    def get_shared_knowledge_store(self) -> SharedKnowledgeStore:
+        return SharedKnowledgeStore(self.get_shared_library_path())
+
     def get_vector_store(self, agent_name: str) -> DeferredVectorStore:
         return DeferredVectorStore(
             self.get_agent_paths(agent_name).chroma_dir,
@@ -58,6 +65,7 @@ class StorageManager:
             self.settings.data_dir,
             self.settings.data_dir / "agents",
             self.settings.data_dir / "shared" / "chroma",
+            self.settings.data_dir / "shared",
             self.settings.data_dir / "tasks",
             self.settings.data_dir / "exports",
         ):
@@ -82,6 +90,8 @@ class StorageManager:
 
             self.get_vector_store(agent_name).initialize()
             initialized_agents.append(agent_name)
+
+        self.get_shared_knowledge_store().initialize_schema()
 
         return InitializationResult(
             initialized_agents=initialized_agents,

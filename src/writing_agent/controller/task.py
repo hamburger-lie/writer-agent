@@ -115,6 +115,19 @@ class ReflectionContext(BaseModel):
     error_message: str | None
 
 
+class SharedFact(BaseModel):
+    """One normalized fact stored in the shared knowledge library."""
+
+    topic: str
+    title: str
+    claim: str
+    evidence: str
+    source_url: str
+    source_title: str
+    source_snippet: str
+    takeaway: str
+
+
 class PipelineTask(BaseModel):
     """Runtime metadata for a single writing task execution."""
 

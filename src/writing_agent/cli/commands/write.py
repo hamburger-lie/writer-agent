@@ -5,6 +5,7 @@ from __future__ import annotations
 import typer
 from rich.console import Console
 
+from writing_agent.agents.librarian import LibrarianAgent
 from writing_agent.agents.planner import PlannerAgent
 from writing_agent.agents.polisher import PolisherAgent
 from writing_agent.agents.researcher import ResearcherAgent
@@ -29,6 +30,7 @@ def build_write_pipeline(settings) -> WritingPipeline:
     manager.initialize()
 
     llm_provider = LLMProvider(settings)
+    librarian = LibrarianAgent(shared_store=manager.get_shared_knowledge_store())
 
     planner = PlannerAgent(
         settings=settings,
@@ -43,12 +45,14 @@ def build_write_pipeline(settings) -> WritingPipeline:
         llm_provider=llm_provider,
         search_client=build_search_client(settings),
         scraper=Crawl4AIScraper(settings),
+        librarian=librarian,
     )
     writer = WriterAgent(
         settings=settings,
         sqlite_store=manager.get_sqlite_store("writer"),
         vector_store=manager.get_vector_store("writer"),
         llm_provider=llm_provider,
+        librarian=librarian,
     )
     polisher = PolisherAgent(
         settings=settings,
