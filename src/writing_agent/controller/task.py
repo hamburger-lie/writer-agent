@@ -87,6 +87,34 @@ class ReviewResult(BaseModel):
     revision_instructions: list[str]
 
 
+class ReflectionLesson(BaseModel):
+    """One reusable lesson extracted from a pipeline run."""
+
+    reflection_text: str
+    category: str
+    confidence: float
+
+
+class ReflectionResult(BaseModel):
+    """Structured automatic reflection artifact."""
+
+    summary: str
+    lessons: list[ReflectionLesson]
+
+
+class ReflectionContext(BaseModel):
+    """Minimal pipeline context supplied to the auto reflection engine."""
+
+    task_id: str
+    topic: str
+    status: str
+    current_stage: str | None
+    plan_title: str | None
+    review_decision: str | None
+    review_summary: str | None
+    error_message: str | None
+
+
 class PipelineTask(BaseModel):
     """Runtime metadata for a single writing task execution."""
 

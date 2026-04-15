@@ -141,3 +141,64 @@ class SQLiteStore:
             )
             conn.commit()
         return int(cursor.lastrowid)
+
+    def list_reflections(self) -> list[sqlite3.Row]:
+        with self._connect() as conn:
+            return list(conn.execute("SELECT * FROM reflections ORDER BY created_at DESC").fetchall())
+
+    def get_reflection(self, reflection_id: int) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            return conn.execute("SELECT * FROM reflections WHERE id = ?", (reflection_id,)).fetchone()
+
+    def record_reflection_observation(
+        self,
+        reflection_text: str,
+        task_id: str | None = None,
+        trigger_context: str | None = None,
+    ) -> int:
+        with self._connect() as conn:
+            existing = conn.execute(
+                "SELECT id, times_seen FROM reflections WHERE reflection_text = ?",
+                (reflection_text,),
+            ).fetchone()
+            if existing is None:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO reflections(
+                        task_id,
+                        reflection_text,
+                        trigger_context,
+                        times_seen,
+                        promoted_to_rule,
+                        created_at
+                    )
+                    VALUES(?, ?, ?, 1, 0, ?)
+                    """,
+                    (task_id, reflection_text, trigger_context, datetime.now(UTC).isoformat()),
+                )
+                conn.commit()
+                return int(cursor.lastrowid)
+
+            conn.execute(
+                """
+                UPDATE reflections
+                SET task_id = ?, trigger_context = ?, times_seen = ?
+                WHERE id = ?
+                """,
+                (
+                    task_id,
+                    trigger_context,
+                    int(existing["times_seen"]) + 1,
+                    int(existing["id"]),
+                ),
+            )
+            conn.commit()
+            return int(existing["id"])
+
+    def mark_reflection_promoted(self, reflection_id: int) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE reflections SET promoted_to_rule = 1 WHERE id = ?",
+                (reflection_id,),
+            )
+            conn.commit()

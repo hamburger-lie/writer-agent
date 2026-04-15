@@ -13,6 +13,7 @@ from writing_agent.agents.writer import WriterAgent
 from writing_agent.config import get_settings
 from writing_agent.controller.pipeline import WritingPipeline
 from writing_agent.llm.provider import LLMProvider
+from writing_agent.reflection.auto_reflect import AutoReflectionEngine
 from writing_agent.storage.manager import StorageManager
 from writing_agent.tools.web_scraper import Crawl4AIScraper
 from writing_agent.tools.web_search import build_search_client
@@ -61,6 +62,10 @@ def build_write_pipeline(settings) -> WritingPipeline:
         vector_store=manager.get_vector_store("reviewer"),
         llm_provider=llm_provider,
     )
+    auto_reflector = AutoReflectionEngine(
+        llm_provider=llm_provider,
+        sqlite_store=manager.get_sqlite_store("reviewer"),
+    )
     return WritingPipeline(
         settings=settings,
         planner=planner,
@@ -68,6 +73,7 @@ def build_write_pipeline(settings) -> WritingPipeline:
         writer=writer,
         polisher=polisher,
         reviewer=reviewer,
+        auto_reflector=auto_reflector,
     )
 
 

@@ -46,3 +46,44 @@ def test_add_rule_and_list_active_rules(tmp_path: Path) -> None:
 
     assert len(rows) == 1
     assert rows[0]["rule_text"] == "Always cite sources."
+
+
+def test_record_reflection_observation_increments_times_seen(tmp_path: Path) -> None:
+    store = SQLiteStore(tmp_path / "reviewer.db")
+    store.initialize_schema()
+
+    first_id = store.record_reflection_observation(
+        reflection_text="Strengthen evidence before review.",
+        task_id="task-1",
+        trigger_context="review failed",
+    )
+    second_id = store.record_reflection_observation(
+        reflection_text="Strengthen evidence before review.",
+        task_id="task-2",
+        trigger_context="review failed again",
+    )
+
+    rows = store.list_reflections()
+
+    assert second_id == first_id
+    assert len(rows) == 1
+    assert rows[0]["times_seen"] == 2
+    assert rows[0]["task_id"] == "task-2"
+    assert rows[0]["trigger_context"] == "review failed again"
+
+
+def test_mark_reflection_promoted_updates_flag(tmp_path: Path) -> None:
+    store = SQLiteStore(tmp_path / "reviewer.db")
+    store.initialize_schema()
+
+    reflection_id = store.record_reflection_observation(
+        reflection_text="Tighten structure before review.",
+        task_id="task-1",
+        trigger_context="review failed",
+    )
+
+    store.mark_reflection_promoted(reflection_id)
+
+    row = store.get_reflection(reflection_id)
+    assert row is not None
+    assert row["promoted_to_rule"] == 1
